@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BUGZERO AI – the coding agent that reviews your pull requests</title>
+<meta name="description" content="BugZero is an AI coding assistant and code review agent. It reviews pull requests, finds bugs and security issues, and writes the fix.">
+<meta name="theme-color" content="#3A4BC8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F6; --surface:#FFFFFF; --ink:#1A2233; --muted:#5A6479; --line:#D3D9E6;
+  --accent:#3A4BC8; --accent-ink:#FFFFFF; --warn:#B86A00; --warn-bg:#FFF1D6;
+  --add-bg:#E1F4EA; --del-bg:#FCE4E4; --ok:#1F7A55;
+  --head:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --body:'Instrument Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#10141F; --surface:#181E2E; --ink:#E6EAF5; --muted:#9AA4BC; --line:#2A3248;
+    --accent:#8C9BFF; --accent-ink:#10141F; --warn:#F0B35A; --warn-bg:#3A2E15;
+    --add-bg:#16352A; --del-bg:#3B1E22; --ok:#5FD3A0; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10141F; --surface:#181E2E; --ink:#E6EAF5; --muted:#9AA4BC; --line:#2A3248;
+  --accent:#8C9BFF; --accent-ink:#10141F; --warn:#F0B35A; --warn-bg:#3A2E15;
+  --add-bg:#16352A; --del-bg:#3B1E22; --ok:#5FD3A0; color-scheme:dark;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1.0625rem/1.6 var(--body)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px;border-radius:4px}
+
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);display:flex;align-items:center;justify-content:space-between;padding:16px 0;border-bottom:1px solid var(--line)}
+.logo{font:700 1.35rem var(--head);text-decoration:none;letter-spacing:-.01em}
+.logo span{color:var(--accent)}
+nav{display:flex;gap:26px;align-items:center;font-size:.95rem}
+nav a{text-decoration:none;color:var(--muted)}
+nav a:hover{color:var(--ink)}
+
+.btn{display:inline-block;font:600 1rem var(--body);padding:13px 22px;border-radius:8px;border:1.5px solid var(--accent);background:var(--accent);color:var(--accent-ink);text-decoration:none;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn:hover{filter:brightness(1.08)}
+
+.hero{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:48px;align-items:center;padding:48px 0 88px}
+h1{font:700 clamp(2.4rem,5vw,3.9rem)/1.04 var(--head);letter-spacing:-.025em;margin:0 0 20px}
+.lede{color:var(--muted);max-width:44ch;margin:0 0 30px;font-size:1.15rem}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+
+/* the review demo */
+.diff{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 18px 50px -24px rgba(26,34,51,.35)}
+.diff-top{display:flex;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);font:500 .8rem var(--mono);color:var(--muted)}
+.code{font:400 .84rem/1.75 var(--mono);overflow-x:auto}
+.ln{display:grid;grid-template-columns:44px 1fr;white-space:pre}
+.ln i{font-style:normal;color:var(--muted);text-align:right;padding-right:12px;user-select:none;opacity:.7}
+.ln.del{background:var(--del-bg)}
+.ln.add{background:var(--add-bg)}
+.note{margin:10px 16px 14px 56px;padding:12px 14px;border-left:4px solid var(--warn);background:var(--warn-bg);border-radius:0 8px 8px 0;font:400 .9rem/1.5 var(--body)}
+.note b{display:block;margin-bottom:2px}
+.note button{margin-top:8px;font:600 .85rem var(--body);padding:7px 14px;border-radius:6px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.note.done{border-left-color:var(--ok);background:var(--add-bg)}
+.fixed{display:none}
+.diff.is-fixed .fixed{display:grid}
+.diff.is-fixed .broken{display:none}
+
+section{padding:72px 0;border-top:1px solid var(--line)}
+h2{font:700 clamp(1.7rem,3.2vw,2.4rem)/1.1 var(--head);letter-spacing:-.02em;margin:0 0 14px;max-width:20ch}
+.sub{color:var(--muted);max-width:56ch;margin:0 0 40px}
+.caps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:40px}
+.caps h3{font:700 1.2rem var(--head);margin:0 0 8px}
+.caps p{margin:0;color:var(--muted)}
+.caps code{font:500 .85em var(--mono);background:var(--surface);border:1px solid var(--line);padding:1px 6px;border-radius:4px}
+
+ol.steps{list-style:none;margin:0;padding:0;counter-reset:s;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:24px}
+ol.steps li{counter-increment:s;padding-top:18px;border-top:3px solid var(--accent)}
+ol.steps li::before{content:counter(s);font:700 1.6rem var(--head);color:var(--accent);display:block;margin-bottom:6px}
+ol.steps strong{display:block;margin-bottom:4px}
+ol.steps span{color:var(--muted);font-size:.97rem}
+
+.final{text-align:left}
+.final h2{max-width:24ch}
+footer{padding:36px 0 56px;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px}
+
+@media (max-width:860px){
+  .hero{grid-template-columns:minmax(0,1fr);padding-bottom:56px}
+  .caps{grid-template-columns:minmax(0,1fr);gap:28px}
+  ol.steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  nav a:not(.btn){display:none}
+}
+.works{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:center;padding:22px 0 0;color:var(--muted);font-size:.95rem}
+.works b{font-weight:600;color:var(--ink)}
+.grid6{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px}
+.card h3{font:700 1.1rem var(--head);margin:0 0 6px}
+.card p{margin:0;color:var(--muted);font-size:.97rem}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;align-items:stretch}
+.plan{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:28px}
+.plan.pop{border:2px solid var(--accent)}
+.plan h3{font:700 1.2rem var(--head);margin:0}
+.price{font:700 2.4rem var(--head);margin:10px 0 2px;letter-spacing:-.02em}
+.price small{font:400 .95rem var(--body);color:var(--muted)}
+.plan ul{list-style:none;padding:0;margin:18px 0 24px;color:var(--muted);font-size:.97rem;flex:1}
+.plan li{padding:6px 0;border-top:1px solid var(--line)}
+.plan .btn{text-align:center}
+.faq{max-width:760px}
+.faq details{border-top:1px solid var(--line);padding:16px 0}
+.faq summary{cursor:pointer;font:600 1.05rem var(--body)}
+.faq p{margin:10px 0 0;color:var(--muted)}
+.fgrid{width:100%;display:grid;grid-template-columns:2fr repeat(3,1fr);gap:28px}
+.fgrid h4{margin:0 0 10px;color:var(--ink);font:600 .95rem var(--body)}
+.fgrid a{display:block;text-decoration:none;padding:3px 0}
+.fgrid a:hover{color:var(--ink)}
+.fbase{width:100%;padding-top:20px;border-top:1px solid var(--line)}
+@media (max-width:860px){.grid6,.plans{grid-template-columns:minmax(0,1fr)}.fgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tools{display:flex;gap:8px}
+.tools button{font:500 .85rem var(--body);padding:8px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.menu{display:none}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+.tabs button{font:500 .85rem var(--body);padding:7px 12px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.tabs button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.wl{display:flex;gap:10px;flex-wrap:wrap;max-width:520px}
+.wl input{flex:1 1 240px;font:inherit;padding:13px 14px;border-radius:8px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink)}
+.sr{position:absolute;left:-9999px}
+.wlmsg{min-height:1.5em;color:var(--muted);margin:10px 0 0}
+@media (max-width:860px){
+  .menu{display:inline-block}
+  nav{display:none}
+  nav.open{display:flex;flex-direction:column;align-items:flex-start;gap:14px;position:absolute;top:100%;left:-24px;right:-24px;padding:18px 24px;background:var(--bg);border-bottom:1px solid var(--line)}
+  nav.open a:not(.btn){display:block}
+}
+@media (prefers-reduced-motion:no-preference){
+  .note{animation:pop .5s .6s both}
+  @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="#top">Code<span>Mate</span></a>
+    <nav id="nav">
+      <a href="#what">Product</a>
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
+      <a class="btn" href="/app">Get started</a>
+    </nav>
+    <div class="tools">
+      <button type="button" id="theme">Dark</button>
+      <button type="button" class="menu" id="menu" aria-expanded="false" aria-controls="nav">Menu</button>
+    </div>
+  </header>
+
+  <main id="top">
+    <div class="hero">
+      <div>
+        <h1>The teammate that reads every pull request.</h1>
+        <p class="lede">BugZero is an AI agent that writes code, reviews changes, and tells you what it found, line by line, before a human has to.</p>
+        <div class="cta">
+          <a class="btn" href="#start">Connect a repository</a>
+          <a class="btn ghost" href="#what">See what it catches</a>
+        </div>
+      </div>
+
+      <div class="diff" id="diff" aria-label="Example code review">
+        <div class="tabs" id="tabs" role="group" aria-label="Example reviews"><button type="button" aria-pressed="true">Bug</button><button type="button" aria-pressed="false">Security</button><button type="button" aria-pressed="false">Crash</button></div>
+        <div class="diff-top"><span>api/orders.py</span><span>PR #482 · Add discount codes</span></div>
+        <div class="code">
+          <div class="ln"><i>41</i>def apply_discount(order, code):</div>
+          <div class="ln"><i>42</i>    rate = DISCOUNTS.get(code, 0)</div>
+          <div class="ln del broken"><i>43</i>    order.total = order.total - order.total * rate</div>
+          <div class="ln add fixed"><i>43</i>    rate = min(max(rate, 0), 1)</div>
+          <div class="ln add fixed"><i>44</i>    order.total = round(order.total * (1 - rate), 2)</div>
+          <div class="ln"><i>45</i>    return order</div>
+        </div>
+        <div class="note" id="note">
+          <b>BugZero · possible bug</b>
+          <span id="msg">A discount rate above 1 makes the total negative, and the result isn’t rounded to cents. Clamp the rate and round the total.</span><br>
+          <button id="fix" type="button">Apply suggested fix</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <section id="what">
+    <h2>Review that explains itself</h2>
+    <p class="sub">Every comment says what is wrong, why it matters, and what to change. You can accept the fix or argue with it.</p>
+    <div class="caps">
+      <div>
+        <h3>Finds real bugs</h3>
+        <p>Off-by-one errors, unchecked inputs, missing <code>await</code>s and unhandled errors, caught while the change is still a diff.</p>
+      </div>
+      <div>
+        <h3>Writes the fix</h3>
+        <p>Suggestions arrive as ready-to-apply patches, in your project’s style, with tests when the change needs them.</p>
+      </div>
+      <div>
+        <h3>Knows your codebase</h3>
+        <p>It reads the surrounding files, not just the diff, so it can flag a change that breaks a caller three modules away.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <h2>From connect to merged</h2>
+    <p class="sub">Setup takes a few minutes. After that, BugZero works inside the pull requests you already open.</p>
+    <ol class="steps">
+      <li><strong>Connect your repo</strong><span>Grant read access to the repositories you choose.</span></li>
+      <li><strong>Open a pull request</strong><span>BugZero starts reviewing as soon as the PR is up.</span></li>
+      <li><strong>Read the comments</strong><span>Findings are posted inline, ranked by severity.</span></li>
+      <li><strong>Apply or dismiss</strong><span>Accept a patch in one click or reply to explain why not.</span></li>
+    </ol>
+  </section>
+
+  <section id="features">
+    <h2>Everything a reviewer does, and a bit more</h2>
+    <p class="sub">BugZero covers the daily work of writing and checking code, so your team spends its time on design decisions.</p>
+    <div class="grid6">
+      <div class="card"><h3>Pull request review</h3><p>Inline comments on every change, ranked by severity so the serious ones come first.</p></div>
+      <div class="card"><h3>Code generation</h3><p>Describe a function or a small feature and get working code that follows your conventions.</p></div>
+      <div class="card"><h3>Test writing</h3><p>Generates unit tests for new and changed code and shows which paths are still uncovered.</p></div>
+      <div class="card"><h3>Security checks</h3><p>Flags injection risks, leaked secrets and unsafe dependencies before they reach main.</p></div>
+      <div class="card"><h3>Refactoring</h3><p>Proposes smaller functions, clearer names and removal of dead code, one reviewable patch at a time.</p></div>
+      <div class="card"><h3>Ask about your code</h3><p>Ask how a module works or where a value comes from and get an answer with file and line references.</p></div>
+    </div>
+    <div class="works"><b>Works with</b><span>GitHub</span><span>GitLab</span><span>Bitbucket</span><span>VS Code</span><span>JetBrains</span><span>Python</span><span>TypeScript</span><span>Java</span><span>Go</span><span>Rust</span></div>
+  </section>
+
+  <section id="pricing">
+    <h2>Pricing that scales with your team</h2>
+    <p class="sub">Start free on a personal project. Move to a team plan when more people need reviews.</p>
+    <div class="plans">
+      <div class="plan"><h3>Free</h3><div class="price">$0</div><small>For individual developers</small>
+        <ul><li>1 private repository</li><li>50 reviews a month</li><li>Community support</li></ul><a class="btn ghost" href="#start">Start free</a></div>
+      <div class="plan pop"><h3>Team</h3><div class="price">$19<small> per user a month</small></div><small>For teams shipping every week</small>
+        <ul><li>Unlimited repositories</li><li>Unlimited reviews</li><li>Security checks and test writing</li><li>Priority support</li></ul><a class="btn" href="#start">Start a team trial</a></div>
+      <div class="plan"><h3>Enterprise</h3><div class="price">Custom</div><small>For larger organisations</small>
+        <ul><li>Single sign-on and audit logs</li><li>Self-hosted option</li><li>Custom review rules</li><li>Dedicated support</li></ul><a class="btn ghost" href="#start">Talk to sales</a></div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <h2>Questions teams ask first</h2>
+    <p class="sub">Can’t find your answer? Reach us at the contact link below.</p>
+    <div class="faq">
+      <details><summary>Does BugZero store my code?</summary><p>Your code is used only to produce the review and is not used to train models. Enterprise plans can run inside your own infrastructure.</p></details>
+      <details><summary>Which languages does it support?</summary><p>Python, TypeScript, JavaScript, Java, Go and Rust work best. Other common languages are supported with less depth.</p></details>
+      <details><summary>Will it replace human reviewers?</summary><p>No. It catches routine problems early so human reviewers can focus on design and intent. Nothing merges without your approval.</p></details>
+      <details><summary>How long does setup take?</summary><p>Connecting a repository takes a few minutes, and the first review runs on your next pull request.</p></details>
+      <details><summary>Can I change what it checks?</summary><p>Yes. Team and Enterprise plans let you set review rules, ignore paths and choose which severities are posted.</p></details>
+    </div>
+  </section>
+
+  <section class="final" id="start">
+    <h2>Put BugZero on your next pull request</h2>
+    <p class="sub">Connect one repository and see the first review within minutes.</p>
+    <form class="wl" id="wl" novalidate>
+      <label for="wlemail" class="sr">Work email</label>
+      <input id="wlemail" name="email" type="email" placeholder="you@company.com" autocomplete="email" required>
+      <button class="btn" type="submit">Join the waitlist</button>
+    </form>
+    <p class="wlmsg" id="wlmsg" role="status"></p>
+  </section>
+
+  <footer>
+    <div class="fgrid">
+      <div><a class="logo" href="#top" style="color:var(--ink)">Code<span>Mate</span></a><p style="margin:8px 0 0;max-width:30ch">An intelligent coding assistant and code review agent.</p></div>
+      <div><h4>Product</h4><a href="#what">Overview</a><a href="#features">Features</a><a href="#pricing">Pricing</a></div>
+      <div><h4>Resources</h4><a href="#how">How it works</a><a href="#faq">FAQ</a><a href="#start">Get started</a></div>
+      <div><h4>Company</h4><a href="#start">Contact</a><a href="#faq">Security</a><a href="#start">Privacy</a></div>
+    </div>
+    <div class="fbase">© 2026 BUGZERO AI. All rights reserved.</div>
+  </footer>
+</div>
+
+<script>
+(function(){
+  var diff=document.getElementById('diff'),btn=document.getElementById('fix'),note=document.getElementById('note'),msg=document.getElementById('msg');
+  btn.addEventListener('click',function(){
+    diff.classList.add('is-fixed');
+    note.classList.add('done');
+    note.querySelector('b').textContent='BugZero · fix applied';
+    msg.textContent='The rate is clamped between 0 and 1 and the total is rounded to cents.';
+    btn.remove();
+  });
+})();
+</script>
+<script>
+(function(){
+var EX=[
+{f:'api/orders.py',pr:'PR #482 · Add discount codes',t:'possible bug',m:'A discount rate above 1 makes the total negative, and the result isn’t rounded to cents. Clamp the rate and round the total.',d:'The rate is clamped between 0 and 1 and the total is rounded to cents.',l:[['c',41,'def apply_discount(order, code):'],['c',42,'    rate = DISCOUNTS.get(code, 0)'],['b',43,'    order.total = order.total - order.total * rate'],['g',43,'    rate = min(max(rate, 0), 1)'],['g',44,'    order.total = round(order.total * (1 - rate), 2)'],['c',45,'    return order']]},
+{f:'api/users.py',pr:'PR #497 · User lookup endpoint',t:'security issue',m:'The user id is placed directly into the SQL string, which allows SQL injection. Pass it as a query parameter instead.',d:'The query now uses a parameter, so the id can’t change the SQL.',l:[['c',12,'def get_user(cursor, uid):'],['b',13,'    cursor.execute(f"SELECT * FROM users WHERE id = {uid}")'],['g',13,'    cursor.execute("SELECT * FROM users WHERE id = %s", (uid,))'],['c',14,'    return cursor.fetchone()']]},
+{f:'src/cart.ts',pr:'PR #503 · Cart totals',t:'possible crash',m:'Calling reduce without a starting value throws on an empty cart. Add 0 as the initial value and a test for the empty case.',d:'The total starts at 0, so an empty cart returns 0 instead of throwing.',l:[['c',8,'export function cartTotal(items: Item[]) {'],['b',9,'  return items.reduce((s, i) => s + i.price * i.qty);'],['g',9,'  return items.reduce((s, i) => s + i.price * i.qty, 0);'],['c',10,'}']]}
+];
+var diff=document.getElementById('diff'),code=diff.querySelector('.code'),note=document.getElementById('note'),bar=diff.querySelector('.diff-top'),tabs=document.getElementById('tabs'),cur=0,fixed=false;
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function draw(){
+  var e=EX[cur];
+  bar.innerHTML='<span>'+e.f+'</span><span>'+e.pr+'</span>';
+  code.innerHTML=e.l.filter(function(x){return x[0]=='c'||(x[0]=='b'&&!fixed)||(x[0]=='g'&&fixed)}).map(function(x){return '<div class="ln '+(x[0]=='b'?'del':x[0]=='g'?'add':'')+'"><i>'+x[1]+'</i>'+esc(x[2])+'</div>'}).join('');
+  note.className='note'+(fixed?' done':'');
+  note.innerHTML='<b>BugZero · '+(fixed?'fix applied':e.t)+'</b><span>'+(fixed?e.d:e.m)+'</span>'+(fixed?'':'<br><button id="fix2" type="button">Apply suggested fix</button>');
+  var b=document.getElementById('fix2');if(b)b.onclick=function(){fixed=true;draw()};
+  [].forEach.call(tabs.children,function(t,i){t.setAttribute('aria-pressed',String(i==cur))});
+}
+[].forEach.call(tabs.children,function(t,i){t.onclick=function(){cur=i;fixed=false;draw()}});
+draw();
+var root=document.documentElement,tb=document.getElementById('theme'),dark=matchMedia('(prefers-color-scheme: dark)').matches;
+function setTheme(){root.setAttribute('data-theme',dark?'dark':'light');tb.textContent=dark?'Light':'Dark'}
+tb.onclick=function(){dark=!dark;setTheme()};setTheme();
+var nav=document.getElementById('nav'),mb=document.getElementById('menu');
+mb.onclick=function(){var o=nav.classList.toggle('open');mb.setAttribute('aria-expanded',String(o))};
+nav.onclick=function(e){if(e.target.tagName=='A'){nav.classList.remove('open');mb.setAttribute('aria-expanded','false')}};
+var f=document.getElementById('wl'),st=document.getElementById('wlmsg');
+f.addEventListener('submit',async function(ev){
+  ev.preventDefault();
+  var em=document.getElementById('wlemail').value.trim();
+  if(!/^\S+@\S+\.\S+$/.test(em)){st.textContent='Enter a valid email address.';return}
+  st.textContent='Saving…';
+  try{
+    var db=window.claude?await window.claude.use('db'):null;
+    var us=window.claude?await window.claude.use('user'):null;
+    if(!db||!us){st.textContent='Sign-up can’t be saved in this view. Please try again later.';return}
+    var uid=await us.id();
+    await db.collection('signups').doc(uid).set({email:em,at:new Date().toISOString()});
+    st.textContent='You’re on the list. We’ll email you when your spot is ready.';f.reset();
+  }catch(err){st.textContent='Couldn’t save your email. Please try again.'}
+});
+})();
+</script>
+</body>
+</html>

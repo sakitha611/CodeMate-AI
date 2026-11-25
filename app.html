@@ -1,0 +1,157 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>BUGZERO AI Workspace</title>
+
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+
+<body>
+
+<header>
+    <a class="brand" href="/">
+        Code<span>Mate</span> AI
+    </a>
+
+    <nav>
+        <a href="/">Home</a>
+
+        <button id="theme" class="secondary" type="button">
+            Dark
+        </button>
+
+        <button id="authBtn" class="secondary" type="button">
+            Login / Register
+        </button>
+    </nav>
+</header>
+
+<main>
+
+    <section class="welcome">
+        <div>
+            <p class="eyebrow">YOUR AI DEVELOPMENT WORKSPACE</p>
+
+            <h1>
+                Ship better code,
+                <em>with confidence.</em>
+            </h1>
+
+            <p>
+                Detect, debug, secure, generate and improve
+                code with your AI assistant.
+            </p>
+        </div>
+
+        <div class="status" id="status">
+            Backend connection: checking…
+        </div>
+    </section>
+
+    <section class="workspace">
+
+        <aside>
+            <button class="nav active" data-mode="smartfix">BugZero Intelligence</button>
+            <button class="nav" data-mode="review">Code review</button>
+            <button class="nav" data-mode="debug">Debug code</button>
+            <button class="nav" data-mode="security">Security scan</button>
+            <button class="nav" data-mode="fix">Fix code</button>
+            <button class="nav" data-mode="tests/generate">Generate tests</button>
+            <button class="nav" data-mode="generate">Generate code</button>
+            <button class="nav" data-mode="chat">Ask BugZero</button>
+            <button class="nav" data-mode="history">Review history</button>
+            <button class="nav" data-mode="github/repositories">GitHub repos</button>
+        </aside>
+
+        <div class="panel">
+
+            <div class="panelhead">
+                <div>
+                    <p class="eyebrow">BUGZERO ASSISTANT</p>
+                    <h2 id="modeTitle">AI code review</h2>
+                </div>
+
+                <span class="pill">Python-powered</span>
+            </div>
+
+            <div id="codeFields">
+
+                <label for="language">Programming language</label>
+
+                <select id="language">
+                    <option>Python</option>
+                    <option>JavaScript</option>
+                    <option>TypeScript</option>
+                    <option>Java</option>
+                    <option>C++</option>
+                    <option>Go</option>
+                    <option>Rust</option>
+                    <option>PHP</option>
+                    <option>SQL</option>
+                </select>
+
+                <label for="code">Your source code</label>
+
+                <textarea
+                    id="code"
+                    spellcheck="false"
+                    placeholder="Paste your code here…">
+                </textarea>
+
+            </div>
+
+            <div id="promptFields" hidden>
+                <label for="prompt">Describe what you want to build</label>
+
+                <textarea
+                    id="prompt"
+                    placeholder="Example: Create a Flask REST API with user registration…">
+                </textarea>
+            </div>
+
+            <div id="chatFields" hidden>
+                <label for="message">Ask a coding question</label>
+
+                <textarea
+                    id="message"
+                    placeholder="How can I improve this function?">
+                </textarea>
+            </div>
+
+            <div class="actions">
+                <button id="run" class="primary" type="button">
+                    Run BugZero workflow
+                </button>
+                <button id="applyFix" class="secondary" type="button" hidden>
+                    Use fixed code
+                </button>
+
+                <button id="clear" class="secondary" type="button">
+                    Clear
+                </button>
+            </div>
+
+            <div id="result" class="result" aria-live="polite">
+                <p class="muted">
+                    Paste code and run BugZero to detect, explain, fix, and review it.
+                </p>
+            </div>
+
+        </div>
+    </section>
+
+    <footer>
+        BUGZERO AI · Keep your code and API keys secure.
+    </footer>
+
+</main>
+
+<script src="/static/js/app.js"></script>
+
+</body>
+</html>
